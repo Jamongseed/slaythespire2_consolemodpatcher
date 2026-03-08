@@ -29,6 +29,26 @@ Slay the Spire 2의 숨겨진 개발자 콘솔 명령 일부를 활성화하는 
 
 ```text
 C:\Program Files (x86)\Steam\steamapps\common\Slay the Spire 2\data_sts2_windows_x86_64\sts2.dll
+```
+
+## 설치 방법
+
+### 패치
+`patch_sts2_auto.bat`를 더블클릭하세요.
+
+프로그램이 자동으로 Steam 라이브러리에서 `sts2.dll`을 찾아 패치합니다.
+
+### 복원
+`restore_sts2_auto.bat`를 더블클릭하세요.
+
+같은 위치의 `sts2.dll.bak` 백업을 사용해 원본으로 복원합니다.
+
+## 수동 실행
+
+### 패치
+```bat
+StS2DllPatcher.exe
+```
 
 ## 사용 방법
 
@@ -50,4 +70,3 @@ card BODY_SLAM deck 을 입력합니다.
 
 이 프로젝트는 비공식 개인 도구입니다.
 게임 파일 수정으로 인해 발생하는 문제는 사용자 책임입니다.
-

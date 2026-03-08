@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Mono.Cecil;
@@ -18,36 +19,55 @@ internal static class Program
         "MegaCrit.Sts2.Core.DevConsole.ConsoleCommands.EnergyConsoleCmd"
     };
 
+    private const string RelativeDllPath = @"steamapps\common\Slay the Spire 2\data_sts2_windows_x86_64\sts2.dll";
+
     private static int Main(string[] args)
     {
-        if (args.Length < 1)
-        {
-            Console.WriteLine("사용법: StS2DllPatcher <sts2.dll 경로>");
-            return 1;
-        }
-
-        string dllPath = args[0];
-        if (!File.Exists(dllPath))
-        {
-            Console.WriteLine($"파일이 없습니다: {dllPath}");
-            return 1;
-        }
-
-        string dllDir = Path.GetDirectoryName(dllPath)!;
-
-        string backupPath = dllPath + ".bak";
-        if (!File.Exists(backupPath))
-        {
-            File.Copy(dllPath, backupPath);
-            Console.WriteLine($"백업 생성: {backupPath}");
-        }
-        else
-        {
-            Console.WriteLine($"백업 이미 존재: {backupPath}");
-        }
-
         try
         {
+            string? dllPath = null;
+
+            if (args.Length >= 1 && !string.IsNullOrWhiteSpace(args[0]))
+            {
+                dllPath = args[0].Trim('"');
+                Console.WriteLine($"입력 경로 사용: {dllPath}");
+            }
+            else
+            {
+                Console.WriteLine("입력 경로가 없어 Steam 라이브러리에서 sts2.dll 자동 탐색을 시도합니다...");
+                dllPath = TryFindSts2Dll();
+            }
+
+            if (string.IsNullOrWhiteSpace(dllPath))
+            {
+                Console.WriteLine("sts2.dll을 찾지 못했습니다.");
+                Console.WriteLine();
+                Console.WriteLine("기본 예상 경로:");
+                Console.WriteLine(@"C:\Program Files (x86)\Steam\steamapps\common\Slay the Spire 2\data_sts2_windows_x86_64\sts2.dll");
+                return 1;
+            }
+
+            if (!File.Exists(dllPath))
+            {
+                Console.WriteLine($"파일이 없습니다: {dllPath}");
+                return 1;
+            }
+
+            Console.WriteLine($"대상 DLL: {dllPath}");
+
+            string dllDir = Path.GetDirectoryName(dllPath)!;
+            string backupPath = dllPath + ".bak";
+
+            if (!File.Exists(backupPath))
+            {
+                File.Copy(dllPath, backupPath);
+                Console.WriteLine($"백업 생성: {backupPath}");
+            }
+            else
+            {
+                Console.WriteLine($"백업 이미 존재: {backupPath}");
+            }
+
             var resolver = new DefaultAssemblyResolver();
             resolver.AddSearchDirectory(dllDir);
 
@@ -59,7 +79,7 @@ internal static class Program
                 ReadingMode = ReadingMode.Immediate
             };
 
-            var assembly = AssemblyDefinition.ReadAssembly(dllPath, readerParams);
+            using var assembly = AssemblyDefinition.ReadAssembly(dllPath, readerParams);
             var module = assembly.MainModule;
 
             int okCount = 0;
@@ -69,13 +89,14 @@ internal static class Program
                 bool ok = EnsureDebugOnlyOverrideFalse(module, fullTypeName);
                 Console.WriteLine($"- {GetShortName(fullTypeName)}: {(ok ? "OK" : "SKIP")}");
                 if (ok)
+                {
                     okCount++;
+                }
             }
 
             if (okCount == 0)
             {
                 Console.WriteLine("패치할 대상이 없어 중단합니다.");
-                assembly.Dispose();
                 return 2;
             }
 
@@ -87,7 +108,6 @@ internal static class Program
             };
 
             assembly.Write(tempPath, writerParams);
-            assembly.Dispose();
 
             File.Copy(tempPath, dllPath, overwrite: true);
             File.Delete(tempPath);
@@ -103,6 +123,144 @@ internal static class Program
             Console.WriteLine(ex);
             return 3;
         }
+    }
+
+    private static string? TryFindSts2Dll()
+    {
+        foreach (string libraryRoot in EnumerateSteamLibraryRoots())
+        {
+            try
+            {
+                string dllPath = Path.Combine(libraryRoot, RelativeDllPath);
+                if (File.Exists(dllPath))
+                {
+                    Console.WriteLine($"발견: {dllPath}");
+                    return dllPath;
+                }
+            }
+            catch
+            {
+            }
+        }
+
+        return null;
+    }
+
+    private static IEnumerable<string> EnumerateSteamLibraryRoots()
+    {
+        var results = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        string[] possibleSteamRoots =
+        {
+            @"C:\Program Files (x86)\Steam",
+            @"C:\Program Files\Steam"
+        };
+
+        foreach (string root in possibleSteamRoots)
+        {
+            if (Directory.Exists(root))
+            {
+                results.Add(root);
+            }
+        }
+
+        foreach (DriveInfo drive in DriveInfo.GetDrives())
+        {
+            try
+            {
+                if (!drive.IsReady)
+                    continue;
+
+                string root = drive.RootDirectory.FullName;
+                string[] candidates =
+                {
+                    Path.Combine(root, "SteamLibrary"),
+                    Path.Combine(root, "Games", "SteamLibrary"),
+                    Path.Combine(root, "Program Files (x86)", "Steam"),
+                    Path.Combine(root, "Program Files", "Steam")
+                };
+
+                foreach (string candidate in candidates)
+                {
+                    if (Directory.Exists(candidate))
+                    {
+                        results.Add(candidate);
+                    }
+                }
+            }
+            catch
+            {
+            }
+        }
+
+        var expanded = new HashSet<string>(results, StringComparer.OrdinalIgnoreCase);
+
+        foreach (string steamRoot in results.ToArray())
+        {
+            foreach (string extra in ReadLibraryFolders(steamRoot))
+            {
+                expanded.Add(extra);
+            }
+        }
+
+        return expanded;
+    }
+
+    private static IEnumerable<string> ReadLibraryFolders(string steamRoot)
+    {
+        var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        try
+        {
+            string vdfPath = Path.Combine(steamRoot, "steamapps", "libraryfolders.vdf");
+            if (!File.Exists(vdfPath))
+                return result;
+
+            foreach (string rawLine in File.ReadAllLines(vdfPath))
+            {
+                string line = rawLine.Trim();
+
+                if (!line.Contains("\"path\"", StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                var quoted = ExtractQuotedValues(line).ToList();
+                if (quoted.Count < 2)
+                    continue;
+
+                string pathValue = quoted[1].Replace(@"\\", @"\");
+                if (Directory.Exists(pathValue))
+                {
+                    result.Add(pathValue);
+                }
+            }
+        }
+        catch
+        {
+        }
+
+        return result;
+    }
+
+    private static IEnumerable<string> ExtractQuotedValues(string line)
+    {
+        var values = new List<string>();
+        int i = 0;
+
+        while (i < line.Length)
+        {
+            int start = line.IndexOf('"', i);
+            if (start < 0)
+                break;
+
+            int end = line.IndexOf('"', start + 1);
+            if (end < 0)
+                break;
+
+            values.Add(line.Substring(start + 1, end - start - 1));
+            i = end + 1;
+        }
+
+        return values;
     }
 
     private static bool EnsureDebugOnlyOverrideFalse(ModuleDefinition module, string fullTypeName)

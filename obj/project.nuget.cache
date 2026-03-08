@@ -1,10 +1,14 @@
 {
   "version": 2,
-  "dgSpecHash": "m+VA0iNsMpY=",
+  "dgSpecHash": "+wUQL1xb8FQ=",
   "success": true,
-  "projectFilePath": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Slay the Spire 2\\StS2DllPatcher\\StS2DllPatcher.csproj",
+  "projectFilePath": "C:\\Users\\user\\Desktop\\github\\slaythespire2_consolemodpatcher\\StS2DllPatcher.csproj",
   "expectedPackageFiles": [
-    "C:\\Users\\user\\.nuget\\packages\\mono.cecil\\0.11.6\\mono.cecil.0.11.6.nupkg.sha512"
+    "C:\\Users\\user\\.nuget\\packages\\microsoft.net.illink.tasks\\9.0.0\\microsoft.net.illink.tasks.9.0.0.nupkg.sha512",
+    "C:\\Users\\user\\.nuget\\packages\\mono.cecil\\0.11.6\\mono.cecil.0.11.6.nupkg.sha512",
+    "C:\\Users\\user\\.nuget\\packages\\microsoft.netcore.app.runtime.win-x64\\9.0.0\\microsoft.netcore.app.runtime.win-x64.9.0.0.nupkg.sha512",
+    "C:\\Users\\user\\.nuget\\packages\\microsoft.windowsdesktop.app.runtime.win-x64\\9.0.0\\microsoft.windowsdesktop.app.runtime.win-x64.9.0.0.nupkg.sha512",
+    "C:\\Users\\user\\.nuget\\packages\\microsoft.aspnetcore.app.runtime.win-x64\\9.0.0\\microsoft.aspnetcore.app.runtime.win-x64.9.0.0.nupkg.sha512"
   ],
   "logs": []
 }

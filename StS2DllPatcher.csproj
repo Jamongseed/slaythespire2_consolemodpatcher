@@ -5,6 +5,8 @@
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <AssemblyName>StS2DllPatcher</AssemblyName>
+    <RootNamespace>StS2DllPatcher</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
